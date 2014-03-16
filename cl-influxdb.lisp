@@ -99,22 +99,24 @@
       (when (and reuse-connection must-close)
 	(close stream))
       (if (= ok-status-code status-code) 
-	  (if debug (list content body-or-stream status-code headers uri stream 
-					 must-close reason-phrase)
-	      
-	      (values (etypecase body-or-stream
-			((SIMPLE-ARRAY (UNSIGNED-BYTE 8))
-			 (json:decode-json-from-string 
-			    (flexi-streams:octets-to-string body-or-stream))
-			 )
-			((VECTOR (UNSIGNED-BYTE 8))
-			 (json:decode-json-from-string 
-			    (flexi-streams:octets-to-string body-or-stream))
-			 )
-			(string (json:decode-json-from-string body-or-stream))
-			(t body-or-stream)
-			) 
-		      reason-phrase))
+	  (progn (when debug 
+		   (pprint (list content body-or-stream status-code headers uri stream 
+				must-close reason-phrase))
+		   
+		   )
+		 (values (etypecase body-or-stream
+			   ((SIMPLE-ARRAY (UNSIGNED-BYTE 8))
+			    (json:decode-json-from-string 
+			     (flexi-streams:octets-to-string body-or-stream))
+			    )
+			   ((VECTOR (UNSIGNED-BYTE 8))
+			    (json:decode-json-from-string 
+			     (flexi-streams:octets-to-string body-or-stream))
+			    )
+			   (string (json:decode-json-from-string body-or-stream))
+			   (t (if body-or-stream body-or-stream t))
+			   ) 
+			 reason-phrase))
 	  (error 'command-fail 
 		 :body-or-stream body-or-stream 
 		 :status-code status-code 
@@ -406,10 +408,12 @@
 @export
 (defmacro print-run (header &rest code )
   `(progn  (format t (concatenate 'string  
-    "=================================================================~%"		  
-	   ,header "~%;;--- code ---" ))
-	   (pprint ',@code) (format t "~%;;------------~%")
-	   (let ((results (eval ',@code))) (format t "~%Results:~a~%" results )results)))
+    "===========================================================================~%"	
+	   ,header "~%;;-----------------------------------CODE----------------------------------" ))
+	   (pprint ',@code) (format t "~%;;-------------------------------------------------------------------------~%")
+	   (let ((results (eval ',@code))) 
+	     (format t "~%Results:")
+	     (pprint results) (format t "~%") results)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
           
