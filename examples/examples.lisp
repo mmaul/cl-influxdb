@@ -129,7 +129,7 @@ One thing to note is that when using symbols or keywords, is that they
 		 :time-precision 's)
 	       
 	       )
-
+    (sleep 1)
     (print-run "
 Lets try a group by query..."
 	        (query *influxdb* "select max(inputgasrate/co2) from gasrateco2 group by time(160m);")
