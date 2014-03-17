@@ -34,7 +34,7 @@
    (status-code :initarg :status-code :reader status-code) 
    (headers :initarg :headers :reader headers) 
    (uri :initarg :uri :reader uri) 
-   (stream :initarg :stream :reader stream) 
+   (stream :initarg :stream :reader cmd-stream) 
    (must-close :initarg :must-close :reader must-close) 
    (reason-phrase :initarg :reason-phrase :reader reason-phrase))
   (:report (lambda (c s) (format s "INITDB COMMAND-FAIL: ~a, ~a" 

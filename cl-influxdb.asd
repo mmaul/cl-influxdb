@@ -26,7 +26,7 @@
 			:components ((:file "package")
 				     (:file "examples")
 				     ))))
-
+#-sbcl
 (asdf:defsystem :cl-influxdb.tests
   :description "Tests for cl-influxdb library"
   :version "0.2.0"
@@ -39,7 +39,7 @@
 			:components ((:file "package")
 				     (:file "tests")
 				     ))))
-
+#-sbcl
 (defmethod asdf:perform ((op asdf:test-op)
                          (system (eql (asdf:find-system :cl-influxdb))))
   (asdf:load-system :cl-influxdb.tests)
