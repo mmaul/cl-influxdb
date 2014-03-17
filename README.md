@@ -12,6 +12,8 @@ It can also be obtained via it's [github repository] (http://github.com/mmaul/cl
 
 Usage
 -----
+Below is the output of runnint the '''exercise''' form in examples/examples.lisp. This demonstrates
+most of the functionality available in this library.
 
 ===========================================================================
 
@@ -19,26 +21,15 @@ Lets create a instance of class INFLUXDB to get started the default is
 user = root, password = root, host = 127.0.0.1, port = 8086.
 ```
 ;;-----------------------------------CODE----------------------------------
-(SETQ *INFLUXDB* (MAKE-INSTANCE 'INFLUXDB :DATABASE *DB*))
-;;-------------------------------------------------------------------------
+(defparameter *db* "example")
+(defparameter *app-user* "user")
+(defparameter *app-password* "user")
 
-Results:
-Group INFLUXDB
-```
-===========================================================================
+(defparameter *influxdb*  (make-instance 'influxdb :database *db*))
 
-Creating another instance if INFLUX DB to test database user commands later.
-```
-;;-----------------------------------CODE----------------------------------
-(SETQ *USER-DB*
-      (MAKE-INSTANCE
-        'INFLUXDB
-        :DATABASE
-        *DB*
-        :USER
-        *APP-USER*
-        :PASSWORD
-        *APP-PASSWORD*))
+(defparameter *user-db* (make-instance 'influxdb :database *db* 
+				   :user *app-user*
+				   :password *app-password*))
 ;;-------------------------------------------------------------------------
 
 Results:
@@ -246,3 +237,13 @@ Results:
 Results:
 T
 ```
+
+TODO
+====
+Document and test Continous Queries
+Async API
+
+License
+=======
+Copyright (c) Mike Maul
+Distributed under the MIT Licenses
