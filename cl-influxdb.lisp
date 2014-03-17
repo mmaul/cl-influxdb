@@ -1,5 +1,3 @@
-;;;; cl-influxdb.lisp
-
 (in-package #:cl-influxdb)
 (annot:enable-annot-syntax)
 
@@ -21,7 +19,7 @@
   (:documentation "InfluxDB connection"))
 
 (defmethod initialize-instance :after 
-           ((self influxdb) &rest args)
+           ((self influxdb) &key) 
   (setf (influxdb.baseurl self) 
 	(format nil "http://~a:~d" (influxdb.host self) (influxdb.port self))
         ))
@@ -138,7 +136,7 @@
   "When using :resue-connection this connection should be called to close the
    stream. If :reuse-connection is not set then this is unnecessary.
   "
-  (let ((stream) (influxdb.stream self)) 
+  (let ((stream (influxdb.stream self))) 
     (when (and stream (open-stream-p stream)) 
       (close stream)))
   )
@@ -311,11 +309,11 @@
 ;;;
 
 @export 
-(defun switch-database ((self influxdb) database)
+(defmethod switch-database ((self influxdb) database)
   (setf (influxdb.database self) database))
 
 @export 
-(defun switch-user ((self influxdb) user password)
+(defmethod switch-user ((self influxdb) user password)
   (setf (influxdb.user self) user)
   (setf (influxdb.password self) password))
 
@@ -348,15 +346,16 @@
 (defmethod delete-cluster-admin ((self influxdb) user)
   (values t (nth-value 1 
 	      (influxdb-cmd self (list "cluster_admins" user) 
-			    :method delete :ok-status-code 204)))
+			    :method :delete :ok-status-code 204)))
   )
 
 @export
 (defmethod alter-database-admin ((self influxdb) user is-admin)
   (values t (nth-value 1 
-	      (influxdb-cmd self (list "db" (influxdb.database "users" user)) 
-			    :data (list (cons 'admin is_admin))
-			    :method post)))
+	      (influxdb-cmd self (list "db" (influxdb.database self) 
+				       "users" user) 
+			    :data (list (cons 'admin is-admin))
+			    :method :post)))
   )
 
 @export
@@ -368,8 +367,8 @@
   (alter-database-admin self user nil))
 
 @export 
-(defun get-database-users ((self influxdb) )
-  (influxdb-cmd self (list "db" (influxdb.database) users) :method :get))
+(defmethod get-database-users ((self influxdb) )
+  (influxdb-cmd self (list "db" (influxdb.database self) :users) :method :get))
 
 @export
 (defmethod add-database-user ((self influxdb) user password)

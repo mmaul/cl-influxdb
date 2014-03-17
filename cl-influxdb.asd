@@ -26,3 +26,22 @@
 			:components ((:file "package")
 				     (:file "examples")
 				     ))))
+
+(asdf:defsystem :cl-influxdb.tests
+  :description "Tests for cl-influxdb library"
+  :version "0.2.0"
+  :author "Mike Maul <mike.maul@gmail.com>"
+  :licence "MIT"
+  :encoding :utf-8
+  :depends-on ("cl-influxdb" "nst")
+  :components ((:module "tests"
+			:serial t
+			:components ((:file "package")
+				     (:file "tests")
+				     ))))
+
+(defmethod asdf:perform ((op asdf:test-op)
+                         (system (eql (asdf:find-system :cl-influxdb))))
+  (asdf:load-system :cl-influxdb.tests)
+  (funcall (find-symbol (symbol-name :run-tests) :cl-influxdb.tests)))
+
