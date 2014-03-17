@@ -21,10 +21,10 @@ user = root, password = root, host = 127.0.0.1, port = 8086.
 ;;-----------------------------------CODE----------------------------------
 (SETQ *INFLUXDB* (MAKE-INSTANCE 'INFLUXDB :DATABASE *DB*))
 ;;-------------------------------------------------------------------------
-```
 
 Results:
 Group INFLUXDB
+```
 ===========================================================================
 
 Creating another instance if INFLUX DB to test database user commands later.
@@ -40,10 +40,10 @@ Creating another instance if INFLUX DB to test database user commands later.
         :PASSWORD
         *APP-PASSWORD*))
 ;;-------------------------------------------------------------------------
-```
 
 Results:
 Group INFLUXDB
+```
 ===========================================================================
 
 First lets see if the server is alive
@@ -51,9 +51,9 @@ First lets see if the server is alive
 ;;-----------------------------------CODE----------------------------------
 (PING *INFLUXDB*)
 ;;-------------------------------------------------------------------------
-```
 Results:
 ((:STATUS . "ok"))
+```
 ===========================================================================
 
 Get list of defined databases and check to see if example database 
@@ -66,14 +66,13 @@ Get list of defined databases and check to see if example database
         DO (PROGN (FORMAT T "Deleting: ~a~%" (CDR NAME))
                   (DELETE-DATABASE *INFLUXDB* (CDR NAME))))
 ;;-------------------------------------------------------------------------
-```
   database
   example
 Deleting: example
-```
 
 Results:
 T
+```
 ===========================================================================
 
 Create a new database
@@ -81,9 +80,9 @@ Create a new database
 ;;-----------------------------------CODE----------------------------------
 (HANDLER-CASE (CREATE-DATABASE *INFLUXDB* *DB*) (COMMAND-FAIL (E) E))
 ;;-------------------------------------------------------------------------
-```
 Results:
 T
+```
 ===========================================================================
  
 If we had tried to create a database and it already existed
@@ -93,9 +92,11 @@ We get a condition, like this:
 (HANDLER-CASE (CREATE-DATABASE *INFLUXDB* *DB*)
               (COMMAND-FAIL (E) (PRINT E)))
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 #<COMMAND-FAIL #x3020048F05AD>
+
+```
 ===========================================================================
 
 Not that it's necessary for this simple test, but you might need
@@ -104,9 +105,10 @@ to create a seperate user for an application. lets add the user 'user'
 ;;-----------------------------------CODE----------------------------------
 (ADD-DATABASE-USER *INFLUXDB* *APP-USER* *APP-PASSWORD*)
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 T
+```
 ===========================================================================
 
 Lets change the app user password
@@ -114,9 +116,10 @@ Lets change the app user password
 ;;-----------------------------------CODE----------------------------------
 (UPDATE-DATABASE-USER-PASSWORD *USER-DB* "newpass1")
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 T
+```
 ===========================================================================
  
 Load some data Note that all commands
@@ -128,9 +131,9 @@ Load some data Note that all commands
               :TIME-PRECISION
               'S)
 ;;-------------------------------------------------------------------------
-```
 Results:
 T
+```
 ===========================================================================
 
 Now that we inserted some data lets list it.
@@ -138,10 +141,11 @@ Now that we inserted some data lets list it.
 ;;-----------------------------------CODE----------------------------------
 (QUERY *USER-DB* "select time from response_times;")
 ;;-------------------------------------------------------------------------
-```
 Results:
 (((:NAME . "response_times") (:COLUMNS "time" "sequence_number" "value")
   (:POINTS (1394761 560001 2) (1394761 550001 1))))
+
+```
 ===========================================================================
 
 Lets insert some data dynamically for a data source on the web.
@@ -171,9 +175,10 @@ One thing to note is that when using symbols or keywords, is that they
               :TIME-PRECISION
               'S)
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 T
+```
 ===========================================================================
 
 Lets try a group by query...
@@ -182,10 +187,12 @@ Lets try a group by query...
 (QUERY *INFLUXDB*
        "select max(inputgasrate/co2) from gasrateco2 group by time(160m);")
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 (((:NAME . "gasrateco2") (:COLUMNS "time" "max")
   (:POINTS (1395024000 0.05624))))
+```
+
 ===========================================================================
 
 Lets clean up now.
@@ -195,19 +202,21 @@ Deleting database user 'user'
 ;;-----------------------------------CODE----------------------------------
 (DELETE-DATABASE-USER *INFLUXDB* *APP-USER*)
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 T
 ===========================================================================
+```
 
 Deleting series response_times
 ```
 ;;-----------------------------------CODE----------------------------------
 (DELETE-SERIES *INFLUXDB* :RESPONSE_TIMES)
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 T
+```
 ===========================================================================
 
 Deleting series gasrateco2
@@ -215,9 +224,10 @@ Deleting series gasrateco2
 ;;-----------------------------------CODE----------------------------------
 (DELETE-SERIES *INFLUXDB* :GASRATECO2)
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 T
+```
 ===========================================================================
 
 Lets see what shards exist...
@@ -225,7 +235,7 @@ Lets see what shards exist...
 ;;-----------------------------------CODE----------------------------------
 (GET-SHARDS *INFLUXDB*)
 ;;-------------------------------------------------------------------------
-```
+
 Results:
 ((:LONG-TERM)
  (:SHORT-TERM
@@ -235,3 +245,4 @@ Results:
    (:START-TIME . 1209600))))
 Results:
 T
+```
