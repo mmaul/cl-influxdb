@@ -242,20 +242,20 @@
 ;;;
 
 @export
-(defmethod list-continous-queries ((self influxdb))
-  (influxdb-cmd self (list "db" (influxdb.database self) "continous_queries") 
+(defmethod list-continuous-queries ((self influxdb))
+  (influxdb-cmd self (list :db (influxdb.database self) :continuous_queries) 
 		:method :get :ok-status-code 200))
 
-
-(defmethod create-continous-queries ((self influxdb) query)
-  (influxdb-cmd self (list "db" (influxdb.database self) "continous_queries") 
+@export
+(defmethod create-continuous-queries ((self influxdb) query)
+  (influxdb-cmd self (list :db (influxdb.database self) :continuous_queries) 
 		:method :post :data (acons "query" query ()) :ok-status-code 200))
 
 
 @export
-(defmethod delete-continous-queries ((self influxdb) id)
+(defmethod delete-continuous-queries ((self influxdb) id)
   (values t (nth-value 1 
-	      (influxdb-cmd self (list "db" (influxdb.database self) "continous_queries" id) 
+	      (influxdb-cmd self (list :db (influxdb.database self) :continuous_queries (etypecase id (string id) (integer (format nil "~d" id))) ) 
 			    :method :delete :ok-status-code 200)))
   )
 

@@ -9,4 +9,5 @@
 
 (defun run-tests ()
   (let ((*print-pretty* t))
-    (nst:nst-cmd :run-package #.*package*)))
+    (nst:nst-cmd :run-package #.*package*)
+    ))

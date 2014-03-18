@@ -135,7 +135,22 @@ Lets try a group by query..."
 	        (query *influxdb* "select max(inputgasrate/co2) from gasrateco2 group by time(160m);")
 		
 		)
-    
+    (print-run "
+Now for continous queries, generally these are used for precomputed rollups.
+Lets list the current precomputed queries.
+"
+	       (list-continuous-queries *influxdb*)
+	       )
+
+    (print-run "
+Now to create a continous query, 
+
+"
+	       (create-continuous-queries *influxdb*
+		 "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"
+					  )
+	       )
+ 
     (print-run "
 Lets clean up now.
 
