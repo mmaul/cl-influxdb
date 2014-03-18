@@ -26,6 +26,23 @@
 			:components ((:file "package")
 				     (:file "examples")
 				     ))))
+
+(asdf:defsystem :cl-influxdb.examples-async
+  :description "Examples of using influxdb asynchyronously"
+  :version "0.2.0"
+  :author "Mike Maul <mike.maul@gmail.com>"
+  :licence "MIT"
+  :encoding :utf-8
+  :depends-on ("cl-influxdb" 
+	       #:parse-number 
+	       #:split-sequence 
+	       #:lparallel)
+  :components ((:module "examples"
+			:serial t
+			:components ((:file "package-async")
+				     (:file "examples-async")
+				     ))))
+
 #-sbcl
 (asdf:defsystem :cl-influxdb.tests
   :description "Tests for cl-influxdb library"
