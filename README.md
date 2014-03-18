@@ -17,9 +17,15 @@ SBCL's enforcement of *pprint-dispatch* immutability.
 Usage
 -----
 
-Below is the output of runnint the '''exercise''' form in examples/examples.lisp. This demonstrates
+Below is the output of running the '''exercise''' form in examples/examples.lisp. This demonstrates
 most of the functionality available in this library.
 
+To run the exaples:
+```
+(quickload :cl-influxdb)
+(quickload :cl-influxdb.examples)
+(cl-influxdb-examples:exercise)
+```
 ===========================================================================
 
 Lets create a instance of class INFLUXDB to get started the default is
@@ -243,10 +249,153 @@ Results:
 T
 ```
 
+Asynchronous usage
+==================
+Rather that create an async query mechanism or write wrappers we will
+just just lparallel ought right. It is simpler and more elegant. For
+detailed usage of lparallel see http://lparallel.org
+
+An example of using cl-influxdb with lparallel is in examples/examples-async.lisp
+Below is the example in action:
+
+Loading the Async examples
+```
+(ql:quickload :cl-influxdb)
+(ql:quickload :cl-influxdb.examples-async)
+(in-package :CL-INFLUXDB.EXAMPLES-ASYNC)
+EXAMPLES-ASYNC> (exercise)
+```
+
+First we just need to create a lparallel kernel which maintains a
+thread pool. The integer parameter to make-kernel specifies the number
+of CPU cores available to lparallel
+```
+;;-----------------------------------CODE----------------------------------
+(WHEN (NOT LPARALLEL.KERNEL:*KERNEL*)
+  (SETF LPARALLEL.KERNEL:*KERNEL* (LPARALLEL.KERNEL:MAKE-KERNEL 2)))
+;;-------------------------------------------------------------------------
+
+Results:
+NIL
+```
+===========================================================================
+
+Create a new database 'example-async unless it already exists
+```
+;;-----------------------------------CODE----------------------------------
+(HANDLER-CASE (CREATE-DATABASE *INFLUXDB* *DB*)
+              (COMMAND-FAIL (E) (PRINT E)))
+;;-------------------------------------------------------------------------
+
+Results:
+T
+```
+===========================================================================
+ 
+Repeating the bulk load from prefious examples, we use lparallel futures to preform the operation asyncyrosnly.
+
+The pattern is: 
+* Make a promise
+* Make future form that fuflills promise
+* Wait and/or do something else 
+* Check for the fulfillment to be complete or call force which blocks
+
+For example something that waits 10 seconds for a future to complete then forces it.
+```
+  (let ((p (promise))) 
+    (future (progn (sleep .3) (fulfill p 'done)))
+    (format t "Wait for future to come") 
+    (loop for i from 1 to 10 
+      when (not (fulfilledp p)) do 
+        (progn (print i) (sleep .1)))
+    (force p))
+```
+Get it? On to using this pattern with write-points
+```
+;;-----------------------------------CODE----------------------------------
+(LET ((P (PROMISE)))
+  (FUTURE (LET ((RESULT
+                 (WRITE-POINTS *INFLUXDB*
+                               (LIST (LIST*
+                                      '(:NAME . GASRATECO2)
+                                      (LIST*
+                                       '(:COLUMNS INPUTGASRATE CO2)
+                                       (LIST
+                                        (CONS
+                                         :POINTS
+                                         (MAPCAR
+                                          #'(LAMBDA
+                                             (L)
+                                             (MAPCAR
+                                              #'ORG.MAPCAR.PARSE-NUMBER:PARSE-NUMBER
+                                              (SPLIT-SEQUENCE:SPLIT-SEQUENCE
+                                               #\,
+                                               L)))
+                                          (CDR
+                                           (SPLIT-SEQUENCE:SPLIT-SEQUENCE
+                                            #\Newline
+                                            (DRAKMA:HTTP-REQUEST
+                                             "http://datasets.connectmv.com/file/gas-furnace.csv")))))))))
+                               :TIME-PRECISION
+                               'S)))
+            (FORMAT T "Heyyyyy I'm done!!!!!~%")
+            (FULFILL P RESULT)))
+  (FORMAT T "Right, lets sleep for a second...~%")
+  (SLEEP 1)
+  (IF (FULFILLEDP P)
+      (FORMAT T "Looks like it's done~%")
+      (FORMAT T
+              "Looks like it's not done yet. Well we will force it, then~%"))
+  (PRINT (FORCE P)))
+;;-------------------------------------------------------------------------
+Right, lets sleep for a second...
+Heyyyyy I'm done!!!!!
+Looks like it's done
+
+T 
+Results:
+T
+```
+===========================================================================
+
+Lets try a group by query...asynchronously 
+We will request fulfillment wait up to 10 seconds and the get the results
+```
+;;-----------------------------------CODE----------------------------------
+(LET ((P (PROMISE)))
+  (FUTURE (FULFILL P
+                   (QUERY *INFLUXDB*
+                          "select max(inputgasrate/co2) from gasrateco2 group by time(160m);")))
+  (LOOP FOR I FROM 1 TO 1000
+        WHEN (NOT (FULFILLEDP P))
+          DO (PROGN (FORMAT T "Wait ~fms~%" (/ I 100)) (SLEEP 0.01)))
+          (FORCE P))
+;;-------------------------------------------------------------------------
+Wait 0.01ms
+Wait 0.02ms
+
+Results:
+(((:NAME . "gasrateco2") (:COLUMNS "time" "max")
+  (:POINTS (1395158400 0.05624))))
+```
+===========================================================================
+
+Remove the new database 'example-async
+```
+;;-----------------------------------CODE----------------------------------
+(HANDLER-CASE (DELETE-DATABASE *INFLUXDB* *DB*)
+              (COMMAND-FAIL (E) (PRINT E)))
+;;-------------------------------------------------------------------------
+
+Results:
+T
+T
+```
+
 TODO
 ====
 Document and test Continous Queries
-Async API
+Chunked 
 
 License
 =======
