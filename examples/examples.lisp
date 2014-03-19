@@ -1,5 +1,5 @@
 (in-package cl-influxdb.examples)
-
+(annot:enable-annot-syntax)
 
 (defparameter *db* "example")
 (defparameter *app-user* "user")
@@ -15,12 +15,16 @@
 
 
 ;; Preform some operations to exercise the interface
+@export
 (defun exercise ()
 
   (setq *db* "example")
   (setq *app-user* "user")
   (setq *app-password* "user")
   (print-run "
+Usage
+=====
+
 Lets create a instance of class INFLUXDB to get started the default is
 user = root, password = root, host = 127.0.0.1, port = 8086.
 "
@@ -44,7 +48,8 @@ First lets see if the server is alive
   
   (print-run "
 Get list of defined databases and check to see if example database 
-'example' exists.  If it does delete it."
+'example' exists.  If it does delete it.
+"
    
 	     (loop for (name resp) in (get-database-list *influxdb*)
 		do (format t "~t ~a~%" (cdr name))
@@ -131,7 +136,8 @@ One thing to note is that when using symbols or keywords, is that they
 	       )
     (sleep 1)
     (print-run "
-Lets try a group by query..."
+Lets try a group by query...
+"
 	        (query *influxdb* "select max(inputgasrate/co2) from gasrateco2 group by time(160m);")
 		
 		)

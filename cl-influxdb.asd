@@ -20,7 +20,10 @@
   :author "Mike Maul <mike.maul@gmail.com>"
   :licence "MIT"
   :encoding :utf-8
-  :depends-on ("cl-influxdb" #:parse-number #:split-sequence)
+  :depends-on (#:cl-influxdb 
+	       #:cl-annot
+	       #:parse-number 
+	       #:split-sequence)
   :components ((:module "examples"
 			:serial t
 			:components ((:file "package")
@@ -33,15 +36,33 @@
   :author "Mike Maul <mike.maul@gmail.com>"
   :licence "MIT"
   :encoding :utf-8
-  :depends-on ("cl-influxdb" 
+  :depends-on (#:cl-influxdb 
+	       #:cl-annot
 	       #:parse-number 
 	       #:split-sequence 
-	       #:lparallel)
+	       #:lparallel
+	       #:cl-csv-data-table
+	       #:data-table
+	       )
   :components ((:module "examples"
 			:serial t
 			:components ((:file "package-async")
 				     (:file "examples-async")
 				     ))))
+
+(asdf:defsystem :cl-influxdb.doc
+  :description "Create documentation for cl-influxdb"
+  :version "0.2.0"
+  :author "Mike Maul <mike.maul@gmail.com>"
+  :licence "MIT"
+  :encoding :utf-8
+  :depends-on (#:cl-influxdb
+	       #:cl-influxdb.examples
+	       #:cl-influxdb.examples-async
+	       #:cl-annot)
+  :components ((:file "doc")
+	       ))
+
 
 #-sbcl
 (asdf:defsystem :cl-influxdb.tests
@@ -50,7 +71,8 @@
   :author "Mike Maul <mike.maul@gmail.com>"
   :licence "MIT"
   :encoding :utf-8
-  :depends-on ("cl-influxdb" "nst")
+  :depends-on (#:cl-influxdb
+	       #:nst)
   :components ((:module "tests"
 			:serial t
 			:components ((:file "package")
