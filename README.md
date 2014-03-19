@@ -29,7 +29,7 @@ user = root, password = root, host = 127.0.0.1, port = 8086.
 
 Results:
 
-#<INFLUXDB #x302002F99F7D>
+#<INFLUXDB #x302003474EFD>
 ```
 ===========================================================================
 
@@ -50,7 +50,7 @@ Creating another instance if INFLUX DB to test database user commands later.
 
 Results:
 
-#<INFLUXDB #x302002F995CD>
+#<INFLUXDB #x3020034744DD>
 ```
 ===========================================================================
 
@@ -78,6 +78,13 @@ Get list of defined databases and check to see if example database
         DO (PROGN (FORMAT T "Deleting: ~a~%" (CDR NAME))
                   (DELETE-DATABASE *INFLUXDB* (CDR NAME))))
 ;;-------------------------------------------------------------------------
+  netflow0
+  netflowX7
+  netflowX2
+  llllllllll
+  netflowX5
+  netflowX14
+  netflowX13
   netflowX6
   lllll
   netflowX8
@@ -96,13 +103,6 @@ Get list of defined databases and check to see if example database
   netflowX11
   example
 Deleting: example
-  netflow0
-  netflowX7
-  netflowX2
-  llllllllll
-  netflowX5
-  netflowX14
-  netflowX13
 
 Results:
 
@@ -130,10 +130,10 @@ We get a condition, like this:
               (COMMAND-FAIL (E) (PRINT E)))
 ;;-------------------------------------------------------------------------
 
-#<COMMAND-FAIL #x302002FD2F0D> 
+#<COMMAND-FAIL #x3020034AC29D> 
 Results:
 
-#<COMMAND-FAIL #x302002FD2F0D>
+#<COMMAND-FAIL #x3020034AC29D>
 ```
 ===========================================================================
 
@@ -189,7 +189,7 @@ Results:
 
 (((:NAME . "response_times")
   (:COLUMNS "time" "sequence_number" "value")
-  (:POINTS (1394761 220001 2) (1394761 210001 1))))
+  (:POINTS (1394761 260001 2) (1394761 250001 1))))
 ```
 ===========================================================================
 
@@ -281,6 +281,9 @@ Results:
   (:QUERY
    . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
  ((:ID . 10)
+  (:QUERY
+   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
+ ((:ID . 11)
   (:QUERY
    . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;")))
 ```
@@ -489,6 +492,7 @@ We will request fulfillment wait up to 10 seconds and the get the results
 ;;-------------------------------------------------------------------------
 Wait 0.01ms
 Wait 0.02ms
+Wait 0.03ms
 
 Results:
 
