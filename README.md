@@ -78,29 +78,6 @@ Get list of defined databases and check to see if example database
         DO (PROGN (FORMAT T "Deleting: ~a~%" (CDR NAME))
                   (DELETE-DATABASE *INFLUXDB* (CDR NAME))))
 ;;-------------------------------------------------------------------------
-  netflow0
-  netflowX7
-  netflowX2
-  llllllllll
-  netflowX5
-  netflowX14
-  netflowX13
-  netflowX6
-  lllll
-  netflowX8
-  netflowX1
-  lllllllllll
-  netflowX17
-  llllllll
-  netflowX3
-  lllllllll
-  netflowX
-  llll
-  llllll
-  lllllll
-  netflowX4
-  netflowX10
-  netflowX11
   example
 Deleting: example
 
@@ -256,36 +233,7 @@ Results:
 (((:ID . 1)
   (:QUERY
    . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 2)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 3)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 4)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 5)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 6)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 7)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 8)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 9)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 10)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;"))
- ((:ID . 11)
-  (:QUERY
-   . "select mean(inputgasrate), mean(co2) from gasrateco2 group by time(1h) into gasrateco2.1h;")))
+)
 ```
 ===========================================================================
 
