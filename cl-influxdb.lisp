@@ -53,7 +53,7 @@
      ))
 
 (defun assert-valid-time-precision (tval)
-  (when (not (or (string= tval "u") (string= tval "m") (string= tval "s")))
+  (when (not (or (string= tval "u") (string= tval "m") (string= tval "s") (string= tval "ms")))
       (error 'invalid-time-precision :text 
 		      (format nil "Time precision must be one of s m u"))
     )
@@ -168,7 +168,7 @@
   (let ((time-precision-string (symbol-keyword-or-string time-precision)))
     (assert-valid-time-precision time-precision-string)
     (influxdb-cmd self (list "db" (influxdb.database self) "series")
-			       :data data :params (acons "time-precision" 
+			       :data data :params (acons "time_precision" 
 							 time-precision-string ())
 			       :debug debug
 			       )) 
