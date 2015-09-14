@@ -1,8 +1,6 @@
-(in-package #:cl-influxdb)
+(in-package #:cl-influxdb-v8)
 (annot:enable-annot-syntax)
 
-
-;ok .9
 @export-class
 (defclass influxdb ()
   ((host :accessor influxdb.host :initarg :host :initform "127.0.0.1")
@@ -10,8 +8,6 @@
    (user :accessor influxdb.user :initarg :user :initform "root")
    (password :accessor influxdb.password :initarg :password :initform "root")
    (database :accessor influxdb.database :initarg :database)
-   (retention-policy :accessor influxdb.retention-policy :initarg :retention-policy :initform nil)
-   (write-consistency :accessor influxdb.write-consistency :initarg :write-consistency :initform nil)
    (reuse-connection :accessor influxdb.reuse-connection :initarg :reuse-connection :initform nil)
    (headers :accessor influxdb.headers 
 	    :initform '(:Content-type  "application/json"
@@ -22,7 +18,6 @@
    )
   (:documentation "InfluxDB connection"))
 
-;ok .9
 (defmethod initialize-instance :after 
            ((self influxdb) &key) 
   (setf (influxdb.baseurl self) 
@@ -46,7 +41,6 @@
 				 (reason-phrase c) (body c))))
   )
 
-;ok .9
 (defun symbol-keyword-or-string (v)
   "Takes symbol keyword or string and returns a string representation
    In the case of symbols and keywords the returned string is down cased."
@@ -58,78 +52,13 @@
      (STRING v)
      ))
 
-;ok .9
 (defun assert-valid-time-precision (tval)
-  (when (not (or (string= tval "u") (string= tval "u") (string= tval "m") (string= tval "s") (string= tval "ms")))
+  (when (not (or (string= tval "u") (string= tval "m") (string= tval "s") (string= tval "ms")))
       (error 'invalid-time-precision :text 
 		      (format nil "Time precision must be one of s m u"))
     )
 )
 
-;ok .9
-(defun replace-all (string part replacement &key (test #'char=))
-"Returns a new string in which all the occurences of the part 
-is replaced with replacement."
-    (with-output-to-string (out)
-      (loop with part-length = (length part)
-            for old-pos = 0 then (+ pos part-length)
-            for pos = (search part string
-                              :start2 old-pos
-                              :test test)
-            do (write-string string out
-                             :start old-pos
-                             :end (or pos (length string)))
-            when pos do (write-string replacement out)
-              while pos)))
-
-;ok .9
-(defun influxdb-key-tag-fmt (v)
-  (let ((w (symbol-keyword-or-string v)))
-    (replace-all (replace-all w " " "\\ ") "," "\\,")))
-
-;ok .9
-(defun influxdb-value-fmt (v)
-  (etypecase v
-    (integer (format nil "~ai" v))
-    (real (format nil "~f" v))
-    (string (format nil "\"~a\"" (replace-all v "\"" "\\\"")))
-    (keyword (format nil "\"~a\"" (symbol-keyword-or-string v)))
-    (symbol (format nil "\"~a\"" (symbol-keyword-or-string v)))
-    (boolean (format nil "~a" v))
-    )
-  )
-
-;ok .9
-@export-structure
-(defstruct influxdb-data key tags columns points)
-(make-influxdb-data :key :a :tags (sort '((:host . "server1") (:aregion . "one")) (lambda (a b) (string< (car a) (car b)))))
-
-;ok.9
-(defun encode-influxdb-data (data)
-  (let ((key-and-tags (format nil "~{~A~^,~}"
-                              (cons (influxdb-key-tag-fmt (influxdb-data-key data))
-                                    (sort  (mapcar (lambda (v) (print v) (format nil "~a=~a"
-                                                                  (influxdb-key-tag-fmt (car v))
-                                                                  (influxdb-key-tag-fmt (cdr v))))
-                                                   (influxdb-data-tags data))
-                                           #'string<)))))
-    (loop for point in (influxdb-data-points data)
-          collect (let ((line
-                          (format nil "~A ~{~A~^,~}"
-                                  key-and-tags
-                                  (mapcar (lambda (k v) (format nil "~a=~a" 
-                                                           (influxdb-key-tag-fmt k)
-                                                           (influxdb-value-fmt v)))
-                                          (influxdb-data-columns data) point
-                                          ))))
-                    (if (> (length point) (length (influxdb-data-columns data)))
-                        (format nil "~a ~a" line (car (reverse point)))
-                        line)
-                    ))
-    )
-  )
-
-;ok .9
 (defmethod influxdb-cmd ((self influxdb) arg-list &key (data ()) (params ()) (method :post) (ok-status-code 200) debug)
   "Submits influxdb command defined by ARG-LIST which the contains elements of
    the path after after the base influxdb URL. Certain commands require a 
@@ -143,15 +72,8 @@ is replaced with replacement."
    On failure raises COMMAND-FAIL condition
   "
   (let ((args (mapcar #'symbol-keyword-or-string arg-list)) (reuse-connection (influxdb.reuse-connection self) )
-        (content
-          (typecase data
-            (list (encode-json-to-string data))
-            (INFLUXDB-DATA (format nil "~{~A~^~%~}" (encode-influxdb-data data)))
-            (t data)))
-        )
-    (when debug (print content))
-    (when debug (print (format nil "~a/~{~A~^/~}" 
-                               (influxdb.baseurl self) args)))
+	(content (if data (encode-json-to-string data) nil))
+	)
     (multiple-value-bind (body-or-stream status-code headers uri stream 
 					 must-close reason-phrase) 
 	(drakma:http-request (format nil "~a/~{~A~^/~}" 
@@ -182,11 +104,13 @@ is replaced with replacement."
 		   )
 		 (values (etypecase body-or-stream
 			   ((SIMPLE-ARRAY (UNSIGNED-BYTE 8))
-			    (let ((resp (flexi-streams:octets-to-string body-or-stream)))
-                  (if (string= "" resp) nil (json:decode-json-from-string resp))))
+			    (json:decode-json-from-string 
+			     (flexi-streams:octets-to-string body-or-stream))
+			    )
 			   ((VECTOR (UNSIGNED-BYTE 8))
-                (let ((resp (flexi-streams:octets-to-string body-or-stream)))
-                  (if (string= "" resp) nil (json:decode-json-from-string (flexi-streams:octets-to-string body-or-stream)))))
+			    (json:decode-json-from-string 
+			     (flexi-streams:octets-to-string body-or-stream))
+			    )
 			   (string (json:decode-json-from-string body-or-stream))
 			   (t (if body-or-stream body-or-stream t))
 			   ) 
@@ -203,13 +127,10 @@ is replaced with replacement."
       
       )))
 
-
-
 ;;; 
 ;;; Database Interaction Commands
 ;;;
 
-;ok .9
 @export
 (defmethod close-reuseable-connection ((self influxdb))
   "When using :resue-connection this connection should be called to close the
@@ -220,9 +141,8 @@ is replaced with replacement."
       (close stream)))
   )
 
-;ok .9
 @export
-(defmethod write-points ((self influxdb) data &key (time-precision "s") write-consistency retention-policy debug)
+(defmethod write-points ((self influxdb) data &key (time-precision "s") debug)
   "
   data is lisp representation of JSON object of the form
   (
@@ -247,49 +167,41 @@ is replaced with replacement."
  "
   (let ((time-precision-string (symbol-keyword-or-string time-precision)))
     (assert-valid-time-precision time-precision-string)
-    (influxdb-cmd self '("write")
-                  :data data :params
-                  (let ((params (acons "db" (influxdb.database self) ())))
-                    (when (or write-consistency (influxdb.write-consistency self))
-                      (setf params (acons "consistency"
-                                         (or write-consistency (influxdb.write-consistency self)) params)))
-                    (when (or retention-policy (influxdb.retention-policy self))
-                      (setf params (acons "rp"
-                                         (or retention-policy (influxdb.retention-policy self)) params)))
-                    params
-                    )
-                  :ok-status-code 204
+    (influxdb-cmd self (list "db" (influxdb.database self) "series")
+			       :data data :params (acons "time_precision" 
+							 time-precision-string ())
 			       :debug debug
 			       )) 
   )
   
 
-;ok .9
 @export
 (defmethod query ((self influxdb) query-txt &key (time-precision "s") 
-					      (chunked nil) retention-policy debug)
+					      (chunked nil) debug)
   "
- When TIME-PRECISION is not of 'n' 's' 'm' or 'u' INVALID-TIME-PRECISION is invoked
+ When TIME-PRECISION is not of 's' 'm' or 'u' INVALID-TIME-PRECISION is invoked
  On Failure COMMAND-FAIL condtion is invoked
  On Success Values lisp representation of JSON and a reason STRING are areturned
   "
   (let ((time-precision-string (symbol-keyword-or-string time-precision)))
     (assert-valid-time-precision time-precision-string)
-    (influxdb-cmd self (list "query")
-                  :params (let ((params
-                                  (acons "chunked" chunked
-                                         (acons "precision" time-precision-string 
-                                                (acons "q" query-txt
-                                                       (acons "db" (influxdb.database self) ()))))))
-                            (when (or retention-policy (influxdb.retention-policy self))
-                              (setf params (acons "rp"
-                                                  (or retention-policy (influxdb.retention-policy self)) params)))
-                            params)
+    (influxdb-cmd self (list "db" (influxdb.database self) "series")
+		  :params (acons "chunked" chunked
+				 (acons "time_precision" time-precision-string 
+					(acons "q" query-txt ())))
 		  :method :get :debug debug))
   )
 
+@export
+(defmethod delete-series ((self influxdb) series)
+  "
 
-;ok .9
+  "
+  (values t (nth-value 1 
+		       (influxdb-cmd self (list :db (influxdb.database self)  :series series) 
+			    :method :delete :ok-status-code 204)))
+  )
+
 @export
 (defmethod create-database ((self influxdb) database)
   "Creates a database named DATABASE. 
@@ -299,11 +211,9 @@ is replaced with replacement."
 "
   
   (values t (nth-value 1 
-                       (influxdb-cmd self '("query") :method :get
-                                                     :params (acons  "q" (concatenate 'string  "CREATE DATABASE " database) '()) :ok-status-code 200)))
+	      (influxdb-cmd self '("db") :data (list (cons 'name  database)) :ok-status-code 201)))
   )
 
-;ok .9
 @export
 (defmethod delete-database ((self influxdb) database)
   "deletes a database named DATABASE. 
@@ -311,53 +221,189 @@ is replaced with replacement."
   Returns multiple values CONTENT, REASON, STREAM
   On failure raises COMMAND-FAIL condition
 "
-  (query self (concatenate 'string  "drop database " database))
   
+  (values t (nth-value 1 
+	      (influxdb-cmd self (list "db" database) 
+			    :method :delete :ok-status-code 204)))
   )
 
-;ok .9
 @export
 (defmethod get-database-list ((self influxdb))
   "
   Returns list of defined databases
   On Failure COMMAND-FAIL condtion is invoked
   "
-  (query self "show databases;")
+  (influxdb-cmd self (list "db") :method :get)
   )
 
 
-;ok .9
+;;;
+;;; continuous queries management interface
+;;;
+
+@export
+(defmethod list-continuous-queries ((self influxdb))
+  (influxdb-cmd self (list :db (influxdb.database self) :continuous_queries) 
+		:method :get :ok-status-code 200))
+
+@export
+(defmethod create-continuous-queries ((self influxdb) query)
+  (influxdb-cmd self (list :db (influxdb.database self) :continuous_queries) 
+		:method :post :data (acons "query" query ()) :ok-status-code 200))
+
+
+@export
+(defmethod delete-continuous-queries ((self influxdb) id)
+  (values t (nth-value 1 
+	      (influxdb-cmd self (list :db (influxdb.database self) :continuous_queries (etypecase id (string id) (integer (format nil "~d" id))) ) 
+			    :method :delete :ok-status-code 200)))
+  )
+
+
 @export
 (defmethod ping ((self influxdb))
   "
    healthcheck
   "
-  (influxdb-cmd self (list "ping" ) :method :get :ok-status-code 204))
+  (influxdb-cmd self (list "ping" ) :method :get :ok-status-code 200))
 
-;ok .9
+
+
+(defmethod force-raft-compaction ((self influxdb))
+  "
+   force a raft log compaction
+  "
+  (influxdb-cmd self (list "raft" "force_compaction") :method :post 
+		:ok-status-code 200))
+
+
+@export
+(defmethod interfaces ((self influxdb))
+  "
+   fetch current list of available interfaces
+  "
+  (influxdb-cmd self (list "interfaces" ) :method :get :ok-status-code 200))
+
+
 @export
 (defmethod list-servers ((self influxdb))
   "
     cluster config endpoints
   "
-  (query self "show servers"))
+  (influxdb-cmd self (list "cluster" "servers") :method :get :ok-status-code 200))
+@export
+(defmethod create-shard ((self influxdb) shard)
+  (influxdb-cmd self (list "cluster" "shards") :method :post 
+		:ok-status-code 200 :data shard))
+@export
+(defmethod get-shards ((self influxdb))
+  (influxdb-cmd self (list "cluster" "shards") :method :get :ok-status-code 200))
+@export
+(defmethod drop-shard ((self influxdb) id)
+  (values t (nth-value 1 
+	      (influxdb-cmd self (list "cluster" "shards" id) 
+			    :method :delete :ok-status-code 200))))
 
 ;;;
 ;;; Cluster and User Admin Section
 ;;;
 
-;ok .9
 @export 
 (defmethod switch-database ((self influxdb) database)
   (setf (influxdb.database self) database))
 
-;ok .9
 @export 
 (defmethod switch-user ((self influxdb) user password)
   (setf (influxdb.user self) user)
   (setf (influxdb.password self) password))
 
-;ok .9
+
+@export
+(defmethod get-list-cluster-admins ((self influxdb))
+  (influxdb-cmd self (list "cluster_admins") :method :get)
+  )
+
+@export
+(defmethod add-cluster-admin ((self influxdb) user password)
+  (values t (nth-value 1 
+	      (influxdb-cmd self '("cluster_admins") 
+			    :data (list (cons 'name  user)
+					(cons 'password password)
+					)
+			    :method :post :ok-status-code 200)))
+  )
+
+@export
+(defmethod update-cluster-admin-password ((self influxdb) password)
+  (values t (nth-value 1 
+	      (influxdb-cmd self '("cluster_admins") 
+			    :data (list (cons 'password password)
+					)
+			    :method :post)))
+  )
+
+@export
+(defmethod delete-cluster-admin ((self influxdb) user)
+  (values t (nth-value 1 
+	      (influxdb-cmd self (list "cluster_admins" user) 
+			    :method :delete :ok-status-code 204)))
+  )
+
+@export
+(defmethod alter-database-admin ((self influxdb) user is-admin)
+  (values t (nth-value 1 
+	      (influxdb-cmd self (list "db" (influxdb.database self) 
+				       "users" user) 
+			    :data (list (cons 'admin is-admin))
+			    :method :post)))
+  )
+
+@export
+(defmethod set-database-admin ((self influxdb) user)
+  (alter-database-admin self user t))
+
+@export
+(defmethod unset-database-admin ((self influxdb) user)
+  (alter-database-admin self user nil))
+
+@export 
+(defmethod get-database-users ((self influxdb) )
+  (influxdb-cmd self (list "db" (influxdb.database self) :users) :method :get))
+
+@export
+(defmethod add-database-user ((self influxdb) user password)
+  (values t (nth-value 1 
+	      (influxdb-cmd self (list "db" (influxdb.database self) "users") 
+			    :data (list (cons 'name  user)
+					(cons 'password password)
+					)
+			    :method :post))))
+
+@export 
+(defmethod update-database-user-password ((self influxdb) password &optional user)
+  "Changes database user password. If no user is spe3cified the current
+   users password is change the new password is also updated in the influxdb
+   instance.
+"
+  (let ((resp (nth-value 1 
+	      (influxdb-cmd self (list "db" (influxdb.database self)
+				       "users" (if user user (influxdb.user self))) 
+			    :data (list (cons 'password password))
+			    :method :post))))
+    (when (not user)
+      (setf (influxdb.password self) password)
+      )
+    (values t resp)
+    )
+  )
+
+@export 
+(defmethod delete-database-user ((self influxdb) user)
+  (values t (nth-value 1 
+	      (influxdb-cmd self (list "db" (influxdb.database self) 
+				       "users" user) 
+			    :method :delete))))
+
 @export
 (defmacro print-run (header &rest code )
   `(progn  (format t (concatenate 'string  

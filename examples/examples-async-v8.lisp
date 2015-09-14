@@ -1,4 +1,4 @@
-(in-package cl-influxdb.examples-async)
+(in-package cl-influxdb.examples-async-v8)
 (annot:enable-annot-syntax)
 
 (defparameter *db* "example-async")

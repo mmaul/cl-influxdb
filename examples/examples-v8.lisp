@@ -1,4 +1,4 @@
-(in-package cl-influxdb.examples)
+(in-package cl-influxdb.examples-v8)
 (annot:enable-annot-syntax)
 
 (defparameter *db* "example")
