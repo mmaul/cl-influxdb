@@ -26,7 +26,7 @@
 	     ))
       (slurp-spit pth "README.txt") 
       (cl-influxdb.examples:exercise)
-      (cl-influxdb.examples-async:exercise)
+      
       ) 
     
     ))

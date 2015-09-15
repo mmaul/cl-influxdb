@@ -1,6 +1,6 @@
-(defpackage :cl-influxdb.examples-async
+(defpackage :cl-influxdb.examples-async-v8
   (:use :cl
-	:cl-influxdb
+	:cl-influxdb-v8
 	)
   (:import-from #:lparallel.promise
 		:future
@@ -18,4 +18,4 @@
 	       )
   )
 
-(in-package :cl-influxdb.examples-async)
+

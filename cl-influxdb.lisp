@@ -287,8 +287,21 @@ is replaced with replacement."
                             params)
 		  :method :get :debug debug))
   )
-
-
+ 
+;ok .9
+@export
+(defun get-series (query-results)
+  "Transforms results from query into an alist with keys :status :name :columns :values"
+  (assert (> (length query-results) 0))
+  (let ((results-list  (car query-results)))
+    (mapcar (lambda (x)
+              (let ((y (car x)))
+                (cond
+                  ((equal :series (car y)) (cons '(:status :ok) (cadr y)))
+                  ((equal :error (car y)) (list (cons :status (car y))
+                                                (cons :description  (cdr y))))
+                  (t (list '(:status . :undefined))))))
+            (cdr results-list ))))
 ;ok .9
 @export
 (defmethod create-database ((self influxdb) database)
