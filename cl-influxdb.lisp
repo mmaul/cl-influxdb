@@ -20,7 +20,11 @@
    (cookie-jar :accessor influxdb.cookie-jar :initform (make-instance 'drakma:cookie-jar))
    (stream :accessor influxdb.stream :initform nil)
    )
-  (:documentation "InfluxDB connection"))
+  (:documentation "InfluxDB connection
+
+    - retention-policy - name of the defined retention policy to use (See InfluxDB docs)
+    - write-consistency - Only relevant when using clusters can be one of one,quorum,all,any
+"))
 
 ;ok .9
 (defmethod initialize-instance :after 
@@ -60,9 +64,9 @@
 
 ;ok .9
 (defun assert-valid-time-precision (tval)
-  (when (not (or (string= tval "u") (string= tval "u") (string= tval "m") (string= tval "s") (string= tval "ms")))
+  (when (not (or (string= tval "n") (string= tval "u") (string= tval "m") (string= tval "s") (string= tval "ms")))
       (error 'invalid-time-precision :text 
-		      (format nil "Time precision must be one of s m u"))
+		      (format nil "Time precision must be one of s m u ms"))
     )
 )
 
@@ -101,35 +105,65 @@ is replaced with replacement."
 
 ;ok .9
 @export-structure
-(defstruct influxdb-data key tags columns points)
-(make-influxdb-data :key :a :tags (sort '((:host . "server1") (:aregion . "one")) (lambda (a b) (string< (car a) (car b)))))
+(defstruct influxdb-data
+  "See InfluxDB documentation for details of components.
+  - key - series name, (can be string or keyword or symbol)
+    tags - assoc list of tags and values (can be string or keyword or symbol)
+    columns - List of column names for values (can be string or keyword or symbol)
+    points  - List lists or vector of vectors values values can be string, boolean or numeric
+              The last element of the list can optionally be a timestamp of precision secons,
+              microseconds or minutes since the unix epoch. If no timestamp is provided the
+              system time is used. It is important to not that the tags and timestamp act
+              as a primary key of sorts. So providing multiple points with no time stamp will
+              result as the last value being stored in the database. The time precision is
+              specified either when creating the INFLUXDB instance or during the call to
+              write-points.
+  example:
+    (make-influxdb-data :key :a
+                        :tags '((:host . \"server1\") (:aregion . \"one\"))
+                        :columns '(v1 v2 v3)
+                        :points  '((1 1.0 \"Y\" 1442371010000000)
+"
+key tags columns points)
+  
 
 ;ok.9
 (defun encode-influxdb-data (data)
   (let ((key-and-tags (format nil "~{~A~^,~}"
                               (cons (influxdb-key-tag-fmt (influxdb-data-key data))
-                                    (sort  (mapcar (lambda (v) (print v) (format nil "~a=~a"
+                                    (sort  (mapcar (lambda (v) (format nil "~a=~a"
                                                                   (influxdb-key-tag-fmt (car v))
                                                                   (influxdb-key-tag-fmt (cdr v))))
                                                    (influxdb-data-tags data))
-                                           #'string<)))))
-    (loop for point in (influxdb-data-points data)
+                                           #'string<))))
+        (points  (let* ((p (influxdb-data-points data)))
+                   (etypecase p
+                     (list p)
+                     ((simple-vector *)  (map 'list (lambda (x) (coerce x 'list)) p))))))
+    (loop for point in points
+          for has-ts = (>  (length point) (length (influxdb-data-columns data) ))
           collect (let ((line
                           (format nil "~A ~{~A~^,~}"
                                   key-and-tags
                                   (mapcar (lambda (k v) (format nil "~a=~a" 
                                                            (influxdb-key-tag-fmt k)
                                                            (influxdb-value-fmt v)))
-                                          (influxdb-data-columns data) point
+                                          (influxdb-data-columns data)
+                                          (if has-ts
+                                              (subseq point 0 (- (length point) 1 ))
+                                              point)
                                           ))))
                     (if (> (length point) (length (influxdb-data-columns data)))
-                        (format nil "~a ~a" line (car (reverse point)))
+                        (if has-ts
+                            (format nil "~a ~a" line (car (reverse point)))
+                            (format nil "~a" line))
                         line)
                     ))
     )
   )
 
 ;ok .9
+@export
 (defmethod influxdb-cmd ((self influxdb) arg-list &key (data ()) (params ()) (method :post) (ok-status-code 200) debug)
   "Submits influxdb command defined by ARG-LIST which the contains elements of
    the path after after the base influxdb URL. Certain commands require a 
@@ -139,8 +173,17 @@ is replaced with replacement."
    documentation for ENCODE-TO-STRING. PARAMS is an alist of paramater
    which will be encoded in the HTTP request (they do not need to be url-encoded).
 
-   Returns multiple values CONTENT, REASON
-   On failure raises COMMAND-FAIL condition
+   Where N is the number of worker threads which should generally be the number of CPU cores.
+
+   - return: Returns multiple values CONTENT, REASON
+             On failure raises COMMAND-FAIL condition
+   - arguments:
+     - influxdb instance
+     - arg-list - list of elements that will be translated into path components when building the URL for the influxdb API endpoint
+     - data     - data to be put in the Post body if it is a list contents is encoded into a json string, if data is of type influxdb-data
+                  it is encoded using the InfluxDB Line Protocol.
+     - method   - request method :get, :post
+     - ok-status-code - Status code indicating success of operation
   "
   (let ((args (mapcar #'symbol-keyword-or-string arg-list)) (reuse-connection (influxdb.reuse-connection self) )
         (content
@@ -186,9 +229,9 @@ is replaced with replacement."
                   (if (string= "" resp) nil (json:decode-json-from-string resp))))
 			   ((VECTOR (UNSIGNED-BYTE 8))
                 (let ((resp (flexi-streams:octets-to-string body-or-stream)))
-                  (if (string= "" resp) nil (json:decode-json-from-string (flexi-streams:octets-to-string body-or-stream)))))
+                  (if (string= "" resp) t (json:decode-json-from-string (flexi-streams:octets-to-string body-or-stream)))))
 			   (string (json:decode-json-from-string body-or-stream))
-			   (t (if body-or-stream body-or-stream t))
+			   (t (if body-or-stream body-or-stream t ))
 			   ) 
 			 reason-phrase))
 	  (error 'command-fail 
@@ -214,6 +257,9 @@ is replaced with replacement."
 (defmethod close-reuseable-connection ((self influxdb))
   "When using :resue-connection this connection should be called to close the
    stream. If :reuse-connection is not set then this is unnecessary.
+
+  - return NIL
+  - arguments INFLUXDB instance
   "
   (let ((stream (influxdb.stream self))) 
     (when (and stream (open-stream-p stream)) 
@@ -223,33 +269,28 @@ is replaced with replacement."
 ;ok .9
 @export
 (defmethod write-points ((self influxdb) data &key (time-precision "s") write-consistency retention-policy debug)
+  "Write points to the database refered by influxdb
+  - return
+    On Failure COMMAND-FAIL condtion is invoked
+    On Success Values T and a reason STRING are are returned
+ 
+  - arguments
+    - data - INFLUXDB-DATA struct containing the point data to be written, see
+             documention for INFLUXDB-DATA for more information.
+    - time-precision - Time precision should be one of 
+                       - 'n' nanoseconds since unix epoch
+                       - 'u' microseconds since unix epoch
+                       - 's' seconds since unix epoch
+                       - 'm' miniutes since unix epoch
+                       When TIME-PRECISION is not of 's' 'm' 'u' 'n'or 'us' INVALID-TIME-PRECISION is invoked
+    - retention-policy - name of the defined retention policy to use (See InfluxDB docs)
+    - write-consistency - Only relevant when using clusters can be one of one,quorum,all,any
   "
-  data is lisp representation of JSON object of the form
-  (
-  (
-   :name: <series name>
-   :columns (<list of column names)
-   :points: (
-     (<row value list 1>)
-     ...
-     (<row value listn>)
-   )
-  )
- ) 
-
- Time precision should be one of 
-   'u' microsecond
-   's' second
-   'm' miniute
- When TIME-PRECISION is not of 's' 'm' 'u' 'ms'or 'us' INVALID-TIME-PRECISION is invoked
- On Failure COMMAND-FAIL condtion is invoked
- On Success Values T and a reason STRING are areturned
- "
   (let ((time-precision-string (symbol-keyword-or-string time-precision)))
     (assert-valid-time-precision time-precision-string)
     (influxdb-cmd self '("write")
                   :data data :params
-                  (let ((params (acons "db" (influxdb.database self) ())))
+                  (let ((params (acons "precision" time-precision-string (acons "db" (influxdb.database self) ()))))
                     (when (or write-consistency (influxdb.write-consistency self))
                       (setf params (acons "consistency"
                                          (or write-consistency (influxdb.write-consistency self)) params)))
@@ -306,9 +347,12 @@ is replaced with replacement."
 @export
 (defmethod create-database ((self influxdb) database)
   "Creates a database named DATABASE. 
-
-  Returns multiple values CONTENT, REASON, STREAM
-  On failure raises COMMAND-FAIL condition
+  
+  -return  multiple values CONTENT, REASON, STREAM
+            On failure raises COMMAND-FAIL condition
+  -arguments
+    - INFLUXDB
+    - database database name
 "
   
   (values t (nth-value 1 
@@ -321,8 +365,11 @@ is replaced with replacement."
 (defmethod delete-database ((self influxdb) database)
   "deletes a database named DATABASE. 
 
-  Returns multiple values CONTENT, REASON, STREAM
-  On failure raises COMMAND-FAIL condition
+  -return  multiple values CONTENT, REASON, STREAM
+            On failure raises COMMAND-FAIL condition
+  -arguments
+    - INFLUXDB
+    - database database name
 "
   (query self (concatenate 'string  "drop database " database))
   
@@ -331,9 +378,13 @@ is replaced with replacement."
 ;ok .9
 @export
 (defmethod get-database-list ((self influxdb))
-  "
-  Returns list of defined databases
-  On Failure COMMAND-FAIL condtion is invoked
+  "Get list of defined databases
+
+  -return list of defined databases
+            On failure raises COMMAND-FAIL condition
+  -arguments
+    - INFLUXDB
+    - database database name
   "
   (query self "show databases;")
   )
@@ -344,14 +395,25 @@ is replaced with replacement."
 (defmethod ping ((self influxdb))
   "
    healthcheck
+
+  -return t on success
+            On failure raises COMMAND-FAIL condition
+  -arguments
+    - INFLUXDB
   "
-  (influxdb-cmd self (list "ping" ) :method :get :ok-status-code 204))
+  (influxdb-cmd self (list "ping" ) :method :get :ok-status-code 204) t)
 
 ;ok .9
 @export
 (defmethod list-servers ((self influxdb))
   "
     cluster config endpoints
+
+  -return list of defined databases
+            On failure raises COMMAND-FAIL condition
+  -arguments
+    - INFLUXDB
+    - database database name
   "
   (query self "show servers"))
 
