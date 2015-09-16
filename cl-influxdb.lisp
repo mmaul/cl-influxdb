@@ -103,6 +103,12 @@ is replaced with replacement."
     )
   )
 
+(defun encode-data (data)
+  (typecase data
+    (list (encode-json-to-string data))
+    (INFLUXDB-DATA (format nil "~{~A~^~%~}" (encode-influxdb-data data)))
+    (t data)))
+
 ;ok .9
 @export-structure
 (defstruct influxdb-data
@@ -162,6 +168,8 @@ key tags columns points)
     )
   )
 
+
+
 ;ok .9
 @export
 (defmethod influxdb-cmd ((self influxdb) arg-list &key (data ()) (params ()) (method :post) (ok-status-code 200) debug)
@@ -187,10 +195,7 @@ key tags columns points)
   "
   (let ((args (mapcar #'symbol-keyword-or-string arg-list)) (reuse-connection (influxdb.reuse-connection self) )
         (content
-          (typecase data
-            (list (encode-json-to-string data))
-            (INFLUXDB-DATA (format nil "~{~A~^~%~}" (encode-influxdb-data data)))
-            (t data)))
+          (encode-data data))
         )
     (when debug (print content))
     (when debug (print (format nil "~a/~{~A~^/~}" 
@@ -266,9 +271,15 @@ key tags columns points)
       (close stream)))
   )
 
+
+@export
+(defun influxdb-udp-socket (host port)
+  "Returns UDP socket for use with write-points using UDP "
+  (usocket:socket-connect host port :protocol :datagram))
+
 ;ok .9
 @export
-(defmethod write-points ((self influxdb) data &key (time-precision "s") write-consistency retention-policy debug)
+(defmethod write-points ((self influxdb) data &key (time-precision "s") write-consistency retention-policy udp-socket debug)
   "Write points to the database refered by influxdb
   - return
     On Failure COMMAND-FAIL condtion is invoked
@@ -285,24 +296,32 @@ key tags columns points)
                        When TIME-PRECISION is not of 's' 'm' 'u' 'n'or 'us' INVALID-TIME-PRECISION is invoked
     - retention-policy - name of the defined retention policy to use (See InfluxDB docs)
     - write-consistency - Only relevant when using clusters can be one of one,quorum,all,any
+    - udp-socket - When present uses supplied influxdb-udp-scket to send data. The total size
+                   of the data should be less than 65536 (can vary with OS and settings)
   "
   (let ((time-precision-string (symbol-keyword-or-string time-precision)))
     (assert-valid-time-precision time-precision-string)
-    (influxdb-cmd self '("write")
-                  :data data :params
-                  (let ((params (acons "precision" time-precision-string (acons "db" (influxdb.database self) ()))))
-                    (when (or write-consistency (influxdb.write-consistency self))
-                      (setf params (acons "consistency"
-                                         (or write-consistency (influxdb.write-consistency self)) params)))
-                    (when (or retention-policy (influxdb.retention-policy self))
-                      (setf params (acons "rp"
-                                         (or retention-policy (influxdb.retention-policy self)) params)))
-                    params
-                    )
-                  :ok-status-code 204
-			       :debug debug
-			       )) 
-  )
+    (if udp-socket
+        (let ((message (encode-data data)))
+          (usocket:socket-send udp-socket
+                                      (flexi-streams:string-to-octets message)
+                                      (length message))
+          ))
+        (influxdb-cmd self '("write")
+                      :data data :params
+                      (let ((params (acons "precision" time-precision-string (acons "db" (influxdb.database self) ()))))
+                        (when (or write-consistency (influxdb.write-consistency self))
+                          (setf params (acons "consistency"
+                                              (or write-consistency (influxdb.write-consistency self)) params)))
+                        (when (or retention-policy (influxdb.retention-policy self))
+                          (setf params (acons "rp"
+                                              (or retention-policy (influxdb.retention-policy self)) params)))
+                        params
+                        )
+                      :ok-status-code 204
+                      :debug debug
+                      ))) 
+  
   
 
 ;ok .9

@@ -6,10 +6,11 @@
   :author "Mike Maul <mike.maul@gmail.com>"
   :license "MIT"
   :depends-on (#:cl-json
-	       #:drakma
-	       #:do-urlencode
-	       #:cl-annot
-	       #:flexi-streams
+               #:drakma
+               #:do-urlencode
+               #:cl-annot
+               #:flexi-streams
+               #:usocket
 	       )
   :components ((:file "package")
                (:file "cl-influxdb")
