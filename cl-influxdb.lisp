@@ -46,8 +46,8 @@
    (stream :initarg :stream :reader cmd-stream) 
    (must-close :initarg :must-close :reader must-close) 
    (reason-phrase :initarg :reason-phrase :reader reason-phrase))
-  (:report (lambda (c s) (format s "INITDB COMMAND-FAIL: ~a, ~a" 
-				 (reason-phrase c) (body c))))
+  (:report (lambda (c s) (format s "INFLUXDB COMMAND-FAIL: ~a, ~a" 
+				 (reason-phrase c) (octets-to-string (body c)))))
   )
 
 ;ok .9

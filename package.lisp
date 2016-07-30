@@ -6,6 +6,7 @@
         #:drakma
         #:cl-annot
         #:cl-annot.class
+        #:flexi-streams
         )
   (:import-from #:do-urlencode
    :urlencode)
@@ -17,6 +18,7 @@
         #:drakma
         #:cl-annot
         #:cl-annot.class
+        #:flexi-streams
         )
   (:import-from #:do-urlencode
    :urlencode)
