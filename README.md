@@ -8,13 +8,15 @@ This package is a native Common Lisp interface for the InfluxDB time series data
 
 News
 ----
-Due to major changes in InfluxDB in starting with version 0.9 seperate packages have been created to work with the versions less than 0.9 and versions 0.9 and greater. The interface `cl-influxdb` that works with version 0.8 and below has been changed to `cl-influxdb-v8` specific information regarding the v8 interface can be obtained by reading README-v8.md.The interface that works with 0.9 is now `cl-influxdb`.
+CL-INFLUXDB has been upgraded to support influxdb version 1
+
+The interface `cl-influxdb` that works with version 0.8 and below has been changed to `cl-influxdb-v8` specific information regarding the v8 interface can be obtained by reading README-v8.md.The interface that works with 0.9 is now `cl-influxdb`.
     
-One of the major changes in version 0.9 and above is that much functionality including most administrative functions have been pulled into the InfluxDB query language. Therefor many of the administrative interface functions have been removed from this interface.
+One of the major changes starting in version 0.9 and above is that much functionality including most administrative functions have been pulled into the InfluxDB query language. Therefor many of the administrative interface functions have been removed from this interface.
 
 Installation
 ------------
-cl-influxdb is distributed via [Quicklisp](http://quicklisp.ort).
+cl-influxdb is distributed via [Quicklisp](http://quicklisp.org).
 It can also be obtained via it's [github repository] (http://github.com/mmaul/cl-influxdb)
 
 Usage
@@ -34,32 +36,15 @@ user = root, password = root, host = 127.0.0.1, port = 8086.
     
     ; Loading "cl-influxdb"
     ..........
-
-
-
-
-
     (:CL-INFLUXDB)
-
-
-
 
     (defpackage #:cl-influxdb-example
       (:use #:cl #:cl-influxdb
             ))
 
-
-
-
     #<PACKAGE "CL-INFLUXDB-EXAMPLE">
 
-
-
-
     (in-package :cl-influxdb-example)
-
-
-
 
     #<PACKAGE "CL-INFLUXDB-EXAMPLE">
 
@@ -71,20 +56,7 @@ user = root, password = root, host = 127.0.0.1, port = 8086.
 
     (defparameter influxdb  (make-instance 'influxdb :database "cl_influxdb_example" :user "root" :password "root"))    
 
-
-
-
     INFLUXDB
-
-
-
-
-    (ping influxdb)
-
-
-
-
-    T
 
 
 
@@ -92,9 +64,6 @@ Create a database, or if the database already exists handle the `command-fail` c
 
 
     (handler-case (create-database influxdb "cl_influxdb_example" ) (command-fail (e) e))
-
-
-
 
     T
 
@@ -110,18 +79,9 @@ Data is writtent by populating a influxdb-data structure and writing it to the d
                       (1394761722 "X" 2.0 1442377211)))
                       :time-precision :s)
 
-
-
-
     T
 
-
-
-
     (query influxdb "select time,v1,c1,t1 from response_times;")
-
-
-
 
     ((:RESULTS
       ((:SERIES
@@ -136,9 +96,6 @@ Now clean up and drop the database
 
     (query influxdb "drop database cl_influxdb_example")
 
-
-
-
     ((:RESULTS NIL))
 
 
@@ -147,7 +104,7 @@ License
 ====
 The MIT License (MIT)
 
-Copyright (c) 2014 Michael Maul
+Copyright (c) 2014-2016 Michael Maul
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in

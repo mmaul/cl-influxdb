@@ -5,7 +5,8 @@
 ;ok .9
 @export-class
 (defclass influxdb ()
-  ((host :accessor influxdb.host :initarg :host :initform "127.0.0.1")
+  ((scheme :accessor influxdb.scheme :initarg :scheme :initform "http")
+   (host :accessor influxdb.host :initarg :host :initform "127.0.0.1")
    (port :accessor influxdb.port :initarg :port :initform 8086)
    (user :accessor influxdb.user :initarg :user :initform "root")
    (password :accessor influxdb.password :initarg :password :initform "root")
@@ -30,7 +31,7 @@
 (defmethod initialize-instance :after 
            ((self influxdb) &key) 
   (setf (influxdb.baseurl self) 
-	(format nil "http://~a:~d" (influxdb.host self) (influxdb.port self))
+	(format nil "~a://~a:~d" (influxdb.scheme self) (influxdb.host self) (influxdb.port self))
         ))
 @export
 (define-condition invalid-time-precision (error)

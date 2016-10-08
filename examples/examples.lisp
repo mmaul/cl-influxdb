@@ -22,12 +22,6 @@ user = root, password = root, host = 127.0.0.1, port = 8086.
                )
 
 
-    (print-run "
-First lets see if the server is alive
-"
-               (ping influxdb)
-               
-               )
         
     (print-run "
 Create a new database"
