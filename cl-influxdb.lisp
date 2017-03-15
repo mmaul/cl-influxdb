@@ -307,7 +307,8 @@ key tags columns points)
           (usocket:socket-send udp-socket
                                       (flexi-streams:string-to-octets message)
                                       (length message))
-          ))
+          )
+
         (influxdb-cmd self '("write")
                       :data data :params
                       (let ((params (acons "precision" time-precision-string (acons "db" (influxdb.database self) ()))))
@@ -321,9 +322,9 @@ key tags columns points)
                         )
                       :ok-status-code 204
                       :debug debug
-                      ))) 
-  
-  
+                      )
+        )
+    ))
 
 ;ok .9
 @export
